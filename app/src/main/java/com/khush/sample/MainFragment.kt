@@ -1,13 +1,17 @@
 package com.khush.sample
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Environment
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.FileProvider
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
@@ -136,6 +140,19 @@ class MainFragment : Fragment() {
         )
 
         fragmentMainBinding.bt1.text = "Video 1"
+        fragmentMainBinding.bt1.setOnLongClickListener {
+            showInputDialog { title ->
+                ketch.download(
+                    url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+                    path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).path,
+                    fileName = "Sample_Video_1.mp4",
+                    customNotificationTitle = title,
+                    tag = "Video",
+                    metaData = "158"
+                )
+            }
+            true
+        }
         fragmentMainBinding.bt1.setOnClickListener {
             ketch.download(
                 url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
@@ -236,6 +253,27 @@ class MainFragment : Fragment() {
             )
         }
     }
+
+    private fun showInputDialog(onInputReceived: (String) -> Unit) {
+        val editText = EditText(context).apply {
+            hint = "Custom notification title"
+            inputType = InputType.TYPE_CLASS_TEXT
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Input Dialog")
+            .setView(editText)
+            .setPositiveButton("OK") { dialog, _ ->
+                val input = editText.text.toString()
+                onInputReceived(input)
+                dialog.dismiss()
+            }
+            .setNegativeButton("Cancel") { dialog, _ ->
+                dialog.cancel()
+            }
+            .show()
+    }
+
 
     private fun observer() {
         viewLifecycleOwner.lifecycleScope.launch {

@@ -66,7 +66,11 @@ internal class DownloadNotificationManager(
         if (update) {
 
             var nb = notificationBuilder
-                .setProgress(DownloadConst.MAX_VALUE_PROGRESS, progress, if (length == 0L) true else false)
+                .setProgress(
+                    DownloadConst.MAX_VALUE_PROGRESS,
+                    progress,
+                    if (length == 0L) true else false
+                )
 
             if (length != 0L) {
                 nb = nb.setContentText(
@@ -86,7 +90,10 @@ internal class DownloadNotificationManager(
         } else {
             // Remove any previous notification
             removeNotification(context, requestId) // In progress notification
-            removeNotification(context, requestId + 1) // Cancelled, Paused, Failed, Success notification
+            removeNotification(
+                context,
+                requestId + 1
+            ) // Cancelled, Paused, Failed, Success notification
 
             // Open Application (Send the unique download request id in intent)
             val intentOpen = context.packageManager.getLaunchIntentForPackage(context.packageName)
@@ -118,6 +125,7 @@ internal class DownloadNotificationManager(
             }
             intentPause.putExtra(NotificationConst.KEY_NOTIFICATION_ID, notificationId)
             intentPause.putExtra(DownloadConst.KEY_REQUEST_ID, requestId)
+            intentPause.putExtra(NotificationConst.KEY_SHOW_BUTTONS, notificationConfig.showButtons)
             val pendingIntentPause = PendingIntent.getBroadcast(
                 context.applicationContext,
                 notificationId,
@@ -131,6 +139,7 @@ internal class DownloadNotificationManager(
             }
             intentCancel.putExtra(NotificationConst.KEY_NOTIFICATION_ID, notificationId)
             intentCancel.putExtra(DownloadConst.KEY_REQUEST_ID, requestId)
+            intentCancel.putExtra(NotificationConst.KEY_SHOW_BUTTONS, notificationConfig.showButtons)
             val pendingIntentCancel = PendingIntent.getBroadcast(
                 context.applicationContext,
                 notificationId,
@@ -142,17 +151,25 @@ internal class DownloadNotificationManager(
                 .setSmallIcon(notificationConfig.smallIcon)
                 .setContentTitle("Downloading $fileName")
                 .setContentIntent(pendingIntentOpen)
-                .setProgress(DownloadConst.MAX_VALUE_PROGRESS, progress, if (length == 0L) true else false)
+                .setProgress(
+                    DownloadConst.MAX_VALUE_PROGRESS,
+                    progress,
+                    if (length == 0L) true else false
+                )
                 .setOnlyAlertOnce(true)
                 .setOngoing(true)
 
-            if (length != 0L) {
+            if (length != 0L && notificationConfig.showButtons) {
                 nb = nb.addAction(-1, NotificationConst.PAUSE_BUTTON_TEXT, pendingIntentPause)
             }
 
             foregroundInfo = ForegroundInfo(
                 notificationId,
-                nb.addAction(-1, NotificationConst.CANCEL_BUTTON_TEXT, pendingIntentCancel)
+                nb.apply {
+                    if (notificationConfig.showButtons) {
+                        addAction(-1, NotificationConst.CANCEL_BUTTON_TEXT, pendingIntentCancel)
+                    }
+                }
                     .setDeleteIntent(pendingIntentDismiss)
                     .build(),
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -227,6 +244,7 @@ internal class DownloadNotificationManager(
                 putExtra(DownloadConst.KEY_LENGTH, totalLength)
                 putExtra(DownloadConst.KEY_REQUEST_ID, requestId)
                 putExtra(NotificationConst.KEY_NOTIFICATION_ID, notificationId)
+                putExtra(NotificationConst.KEY_SHOW_BUTTONS, notificationConfig.showButtons)
                 action = NotificationConst.ACTION_DOWNLOAD_COMPLETED
             }
         )
@@ -259,6 +277,7 @@ internal class DownloadNotificationManager(
                 putExtra(DownloadConst.KEY_FILE_NAME, fileName)
                 putExtra(DownloadConst.KEY_REQUEST_ID, requestId)
                 putExtra(NotificationConst.KEY_NOTIFICATION_ID, notificationId)
+                putExtra(NotificationConst.KEY_SHOW_BUTTONS, notificationConfig.showButtons)
                 putExtra(DownloadConst.KEY_PROGRESS, currentProgress)
                 action = NotificationConst.ACTION_DOWNLOAD_FAILED
             }
@@ -291,6 +310,7 @@ internal class DownloadNotificationManager(
                 putExtra(DownloadConst.KEY_FILE_NAME, fileName)
                 putExtra(DownloadConst.KEY_REQUEST_ID, requestId)
                 putExtra(NotificationConst.KEY_NOTIFICATION_ID, notificationId)
+                putExtra(NotificationConst.KEY_SHOW_BUTTONS, notificationConfig.showButtons)
                 action = NotificationConst.ACTION_DOWNLOAD_CANCELLED
             }
         )
@@ -324,6 +344,7 @@ internal class DownloadNotificationManager(
                 putExtra(DownloadConst.KEY_PROGRESS, currentProgress)
                 putExtra(DownloadConst.KEY_REQUEST_ID, requestId)
                 putExtra(NotificationConst.KEY_NOTIFICATION_ID, notificationId)
+                putExtra(NotificationConst.KEY_SHOW_BUTTONS, notificationConfig.showButtons)
                 action = NotificationConst.ACTION_DOWNLOAD_PAUSED
             }
         )

@@ -60,7 +60,7 @@ internal class DownloadWorker(
                 context = context,
                 notificationConfig = notificationConfig,
                 requestId = id,
-                fileName = fileName
+                fileName = downloadRequest.customNotificationTitle ?: fileName
             )
         }
 
@@ -213,9 +213,11 @@ internal class DownloadWorker(
                     }
                 }
             }
-            Result.failure(
-                workDataOf(ExceptionConst.KEY_EXCEPTION to e.message)
-            )
+//            Result.failure(
+//                workDataOf(ExceptionConst.KEY_EXCEPTION to e.message)
+//            )
+
+            Result.retry()
         }
 
     }

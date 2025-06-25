@@ -18,7 +18,7 @@ internal class DownloadTask(
     companion object {
         private const val VALUE_200 = 200
         private const val VALUE_299 = 299
-        private const val TIME_TO_TRIGGER_PROGRESS = 1500
+        private const val TIME_TO_TRIGGER_PROGRESS = 300
     }
 
     suspend fun download(
@@ -86,7 +86,7 @@ internal class DownloadTask(
                 var progressInvokeTime = System.currentTimeMillis()
                 var speed: Float
 
-                onProgress.invoke(0L, 0L, 0F)
+//                onProgress.invoke(0L, 0L, 0F)
 
                 while (bytes >= 0) {
 
@@ -97,6 +97,7 @@ internal class DownloadTask(
                     val finalTime = System.currentTimeMillis()
                     if (finalTime - progressInvokeTime >= TIME_TO_TRIGGER_PROGRESS) {
 
+                        // TODO: Fix speed calculation
                         speed = tempBytes.toFloat() / ((finalTime - progressInvokeTime).toFloat())
                         tempBytes = 0L
                         progressInvokeTime = System.currentTimeMillis()

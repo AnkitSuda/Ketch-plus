@@ -142,7 +142,10 @@ class Ketch private constructor(
                     if (!::okHttpClient.isInitialized) {
                         okHttpClient = OkHttpClient
                             .Builder()
-                            .connectTimeout(downloadConfig.connectTimeOutInMs, TimeUnit.MILLISECONDS)
+                            .connectTimeout(
+                                downloadConfig.connectTimeOutInMs,
+                                TimeUnit.MILLISECONDS
+                            )
                             .readTimeout(downloadConfig.readTimeOutInMs, TimeUnit.MILLISECONDS)
                             .build()
                     }
@@ -193,6 +196,7 @@ class Ketch private constructor(
         metaData: String = "",
         headers: HashMap<String, String> = hashMapOf(),
         supportPauseResume: Boolean = true,
+        customNotificationTitle: String? = null,
     ): Int {
         val downloadRequest = prepareDownloadRequest(
             url = url,
@@ -202,6 +206,7 @@ class Ketch private constructor(
             headers = headers,
             metaData = metaData,
             supportPauseResume = supportPauseResume,
+            customNotificationTitle = customNotificationTitle,
         )
         downloadManager.downloadAsync(downloadRequest)
         return downloadRequest.id
@@ -226,6 +231,7 @@ class Ketch private constructor(
         metaData: String = "",
         headers: HashMap<String, String> = hashMapOf(),
         supportPauseResume: Boolean = true,
+        customNotificationTitle: String? = null,
     ): Int {
         val downloadRequest = mutex.withLock {
             prepareDownloadRequest(
@@ -236,6 +242,7 @@ class Ketch private constructor(
                 headers = headers,
                 metaData = metaData,
                 supportPauseResume = supportPauseResume,
+                customNotificationTitle = customNotificationTitle,
             )
         }
         downloadManager.download(downloadRequest)
@@ -517,7 +524,8 @@ class Ketch private constructor(
      * @param status
      * @return [DownloadModel] if present else null
      */
-    suspend fun getDownloadModelByStatus(status: Status) = downloadManager.getDownloadModelByStatus(status)
+    suspend fun getDownloadModelByStatus(status: Status) =
+        downloadManager.getDownloadModelByStatus(status)
 
     /**
      * Suspend function to get download model by list of tags
@@ -525,7 +533,8 @@ class Ketch private constructor(
      * @param tags
      * @return List of [DownloadModel]
      */
-    suspend fun getDownloadModelByTags(tags: List<String>) = downloadManager.getDownloadModelByTags(tags)
+    suspend fun getDownloadModelByTags(tags: List<String>) =
+        downloadManager.getDownloadModelByTags(tags)
 
     /**
      * Suspend function to get download model by list of ids
@@ -541,7 +550,8 @@ class Ketch private constructor(
      * @param statuses
      * @return List of [DownloadModel]
      */
-    suspend fun getDownloadModelByStatuses(statuses: List<Status>) = downloadManager.getDownloadModelByStatuses(statuses)
+    suspend fun getDownloadModelByStatuses(statuses: List<Status>) =
+        downloadManager.getDownloadModelByStatuses(statuses)
 
     private fun prepareDownloadRequest(
         url: String,
@@ -551,6 +561,7 @@ class Ketch private constructor(
         headers: HashMap<String, String>,
         metaData: String,
         supportPauseResume: Boolean,
+        customNotificationTitle: String? = null,
     ): DownloadRequest {
         require(url.isNotEmpty() && path.isNotEmpty() && fileName.isNotEmpty()) {
             "Missing ${if (url.isEmpty()) "url" else if (path.isEmpty()) "path" else "fileName"}"
@@ -569,6 +580,7 @@ class Ketch private constructor(
             headers = headers,
             metaData = metaData,
             supportPauseResume = supportPauseResume,
+            customNotificationTitle = customNotificationTitle,
         )
 
         return downloadRequest

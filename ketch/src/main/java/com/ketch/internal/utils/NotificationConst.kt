@@ -12,6 +12,7 @@ internal object NotificationConst {
     const val KEY_NOTIFICATION_SMALL_ICON = "key_small_notification_icon"
     const val DEFAULT_VALUE_NOTIFICATION_SMALL_ICON = -1
     const val KEY_NOTIFICATION_ID = "key_notification_id"
+    const val KEY_SHOW_BUTTONS = "key_show_buttons"
 
     // Actions
     const val ACTION_NOTIFICATION_DISMISSED = "ACTION_NOTIFICATION_DISMISSED"

@@ -1,9 +1,11 @@
 package com.ketch.internal.download
 
 import android.content.Context
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
@@ -33,7 +35,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import java.time.Duration
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 internal class DownloadManager(
     private val context: Context,
@@ -83,11 +87,13 @@ internal class DownloadManager(
                                             msg = "Download in Progress. FileName: ${downloadEntity?.fileName}, " +
                                                     "ID: ${downloadEntity?.id}, " +
                                                     "Size in bytes: ${downloadEntity?.totalBytes}, " +
-                                                    "downloadPercent: ${if (downloadEntity != null && downloadEntity.totalBytes.toInt() != 0) {
-                                                        ((downloadEntity.downloadedBytes * 100) / downloadEntity.totalBytes).toInt()
-                                                    } else {
-                                                        0
-                                                    }}%, " +
+                                                    "downloadPercent: ${
+                                                        if (downloadEntity != null && downloadEntity.totalBytes.toInt() != 0) {
+                                                            ((downloadEntity.downloadedBytes * 100) / downloadEntity.totalBytes).toInt()
+                                                        } else {
+                                                            0
+                                                        }
+                                                    }%, " +
                                                     "downloadSpeedInBytesPerMilliSeconds: ${downloadEntity?.speedInBytePerMs} b/ms"
                                         )
 
@@ -143,11 +149,15 @@ internal class DownloadManager(
 
         val constraints = Constraints
             .Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
             .build()
 
         val downloadWorkRequest = OneTimeWorkRequestBuilder<DownloadWorker>()
             .setInputData(inputData)
             .addTag(DownloadConst.TAG_DOWNLOAD)
+            .setBackoffCriteria(
+                BackoffPolicy.LINEAR, 10, TimeUnit.SECONDS,
+            )
             .setConstraints(constraints)
             .build()
 
@@ -190,7 +200,8 @@ internal class DownloadManager(
                     uuid = downloadWorkRequest.id.toString(),
                     lastModified = System.currentTimeMillis(),
                     userAction = UserAction.START.toString(),
-                    metaData = downloadRequest.metaData
+                    metaData = downloadRequest.metaData,
+                    customNotificationTitle = downloadRequest.customNotificationTitle,
                 )
             )
         }
@@ -219,7 +230,8 @@ internal class DownloadManager(
                     tag = downloadEntity.tag,
                     id = downloadEntity.id,
                     headers = WorkUtil.jsonToHashMap(downloadEntity.headersJson),
-                    metaData = downloadEntity.metaData
+                    metaData = downloadEntity.metaData,
+                    customNotificationTitle = downloadEntity.customNotificationTitle,
                 )
             )
         }
@@ -247,7 +259,7 @@ internal class DownloadManager(
                     context = context,
                     notificationConfig = notificationConfig,
                     requestId = id,
-                    fileName = downloadEntity.fileName
+                    fileName = downloadEntity.customNotificationTitle ?: downloadEntity.fileName
                 ).sendDownloadCancelledNotification()
             }
         }
@@ -417,7 +429,10 @@ internal class DownloadManager(
                 }
                 downloadDao.remove(it.id)
                 removeNotification(context, it.id) // In progress notification
-                removeNotification(context, it.id + 1) // Cancelled, Paused, Failed, Success notification
+                removeNotification(
+                    context,
+                    it.id + 1
+                ) // Cancelled, Paused, Failed, Success notification
             }
         }
     }
@@ -433,7 +448,10 @@ internal class DownloadManager(
                     deleteFileIfExists(path, fileName)
                 }
                 removeNotification(context, it.id) // In progress notification
-                removeNotification(context, it.id + 1) // Cancelled, Paused, Failed, Success notification
+                removeNotification(
+                    context,
+                    it.id + 1
+                ) // Cancelled, Paused, Failed, Success notification
             }
             downloadDao.deleteAll()
         }
@@ -451,7 +469,10 @@ internal class DownloadManager(
                 }
                 downloadDao.remove(it.id)
                 removeNotification(context, it.id) // In progress notification
-                removeNotification(context, it.id + 1) // Cancelled, Paused, Failed, Success notification
+                removeNotification(
+                    context,
+                    it.id + 1
+                ) // Cancelled, Paused, Failed, Success notification
             }
         }
     }
@@ -485,11 +506,12 @@ internal class DownloadManager(
     }
 
     fun observeDownloadsByStatus(status: Status): Flow<List<DownloadModel>> {
-        return downloadDao.getAllEntityByStatusFlow(status.name).distinctUntilChanged().map { entityList ->
-            entityList.map { entity ->
-                entity.toDownloadModel()
+        return downloadDao.getAllEntityByStatusFlow(status.name).distinctUntilChanged()
+            .map { entityList ->
+                entityList.map { entity ->
+                    entity.toDownloadModel()
+                }
             }
-        }
     }
 
     fun observeDownloadsByIds(ids: List<Int>): Flow<List<DownloadModel?>> {
