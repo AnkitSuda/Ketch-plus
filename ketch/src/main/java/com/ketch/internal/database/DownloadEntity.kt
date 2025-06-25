@@ -27,5 +27,5 @@ internal data class DownloadEntity(
     var userAction: String = UserAction.DEFAULT.toString(),
     var metaData: String = "",
     var failureReason: String = "",
-    var customNotificationTitle: String? = null
+    var customNotificationTitle: String? = null,
 )

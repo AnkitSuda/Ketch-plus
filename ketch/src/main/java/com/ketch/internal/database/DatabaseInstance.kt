@@ -2,8 +2,20 @@ package com.ketch.internal.database
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 internal object DatabaseInstance {
+    private val MIGRATION_1_2 = object : Migration(1, 2) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+            ALTER TABLE downloads 
+            ADD COLUMN customNotificationTitle TEXT
+        """.trimIndent()
+            )
+        }
+    }
 
     @Volatile
     private var INSTANCE: DownloadDatabase? = null
@@ -24,5 +36,7 @@ internal object DatabaseInstance {
             context.applicationContext,
             DownloadDatabase::class.java,
             "ketch_downloader"
-        ).fallbackToDestructiveMigration().build()
+        )
+            .addMigrations(MIGRATION_1_2)
+            .fallbackToDestructiveMigration().build()
 }
