@@ -39,7 +39,7 @@ internal class NotificationReceiver : BroadcastReceiver() {
             val nId = intent.extras?.getInt(NotificationConst.KEY_NOTIFICATION_ID)
             if (nId != null) NotificationManagerCompat.from(context).cancel(nId)
             if (requestId != null) {
-                ketch.resume(requestId)
+                ketch.resume(requestId, null)
             }
             return
         }

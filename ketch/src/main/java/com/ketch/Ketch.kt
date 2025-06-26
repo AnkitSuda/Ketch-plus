@@ -197,6 +197,7 @@ class Ketch private constructor(
         headers: HashMap<String, String> = hashMapOf(),
         supportPauseResume: Boolean = true,
         customNotificationTitle: String? = null,
+        md5: String? = null,
     ): Int {
         val downloadRequest = prepareDownloadRequest(
             url = url,
@@ -232,6 +233,7 @@ class Ketch private constructor(
         headers: HashMap<String, String> = hashMapOf(),
         supportPauseResume: Boolean = true,
         customNotificationTitle: String? = null,
+        md5: String? = null,
     ): Int {
         val downloadRequest = mutex.withLock {
             prepareDownloadRequest(
@@ -243,6 +245,7 @@ class Ketch private constructor(
                 metaData = metaData,
                 supportPauseResume = supportPauseResume,
                 customNotificationTitle = customNotificationTitle,
+                md5 = md5,
             )
         }
         downloadManager.download(downloadRequest)
@@ -306,8 +309,8 @@ class Ketch private constructor(
      *
      * @param id Unique Download ID of the download
      */
-    fun resume(id: Int) {
-        downloadManager.resumeAsync(id)
+    fun resume(id: Int, customNotificationTitle: String?) {
+        downloadManager.resumeAsync(id, customNotificationTitle)
     }
 
     /**
@@ -315,8 +318,8 @@ class Ketch private constructor(
      *
      * @param tag Tag associated with the download
      */
-    fun resume(tag: String) {
-        downloadManager.resumeAsync(tag)
+    fun resume(tag: String, customNotificationTitle: String?) {
+        downloadManager.resumeAsync(tag, customNotificationTitle)
     }
 
     /**
@@ -562,6 +565,7 @@ class Ketch private constructor(
         metaData: String,
         supportPauseResume: Boolean,
         customNotificationTitle: String? = null,
+        md5: String? = null,
     ): DownloadRequest {
         require(url.isNotEmpty() && path.isNotEmpty() && fileName.isNotEmpty()) {
             "Missing ${if (url.isEmpty()) "url" else if (path.isEmpty()) "path" else "fileName"}"

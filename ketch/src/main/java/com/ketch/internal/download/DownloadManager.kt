@@ -1,6 +1,7 @@
 package com.ketch.internal.download
 
 import android.content.Context
+import android.util.Log
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.Data
@@ -35,7 +36,6 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import java.time.Duration
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
@@ -63,6 +63,11 @@ internal class DownloadManager(
             workManager.getWorkInfosByTagFlow(DownloadConst.TAG_DOWNLOAD).flowOn(Dispatchers.IO)
                 .collectLatest { workInfos ->
                     for (workInfo in workInfos) {
+                        Log.d(
+                            "DASDASDDAASDDAS", "WorkInfo: ${workInfo.id}, " +
+                                    "State: ${workInfo.state}, " +
+                                    "Stop Reason: ${workInfo.stopReason}"
+                        )
                         when (workInfo.state) {
                             WorkInfo.State.ENQUEUED -> {
                                 val downloadEntity = findDownloadEntityFromUUID(workInfo.id)
@@ -70,6 +75,13 @@ internal class DownloadManager(
                                     msg = "Download Queued. FileName: ${downloadEntity?.fileName}, " +
                                             "ID: ${downloadEntity?.id}"
                                 )
+
+                                downloadEntity?.copy(
+                                    userAction = UserAction.START.toString(),
+                                    status = Status.QUEUED.toString(),
+                                    lastModified = System.currentTimeMillis(),
+                                    stopReason = workInfo.stopReason,
+                                )?.let { downloadDao.update(it) }
                             }
 
                             WorkInfo.State.RUNNING -> {
@@ -213,11 +225,14 @@ internal class DownloadManager(
         )
     }
 
-    private suspend fun resume(id: Int) {
+    private suspend fun resume(id: Int, customNotificationTitle: String?) {
         val downloadEntity = downloadDao.find(id)
         if (downloadEntity != null) {
+            val newNotificationTitle = customNotificationTitle
+                ?: downloadEntity.customNotificationTitle
             downloadDao.update(
                 downloadEntity.copy(
+                    customNotificationTitle = newNotificationTitle,
                     userAction = UserAction.RESUME.toString(),
                     lastModified = System.currentTimeMillis()
                 )
@@ -231,7 +246,7 @@ internal class DownloadManager(
                     id = downloadEntity.id,
                     headers = WorkUtil.jsonToHashMap(downloadEntity.headersJson),
                     metaData = downloadEntity.metaData,
-                    customNotificationTitle = downloadEntity.customNotificationTitle,
+                    customNotificationTitle = newNotificationTitle,
                 )
             )
         }
@@ -272,7 +287,8 @@ internal class DownloadManager(
             downloadDao.update(
                 downloadEntity.copy(
                     userAction = UserAction.PAUSE.toString(),
-                    lastModified = System.currentTimeMillis()
+                    lastModified = System.currentTimeMillis(),
+                    status = Status.PAUSED.toString()
                 )
             )
         }
@@ -296,7 +312,7 @@ internal class DownloadManager(
                     tag = downloadEntity.tag,
                     id = downloadEntity.id,
                     headers = WorkUtil.jsonToHashMap(downloadEntity.headersJson),
-                    metaData = downloadEntity.metaData
+                    metaData = downloadEntity.metaData,
                 )
             )
         }
@@ -306,17 +322,17 @@ internal class DownloadManager(
         return downloadDao.getAllEntity().find { it.uuid == uuid.toString() }
     }
 
-    fun resumeAsync(id: Int) {
+    fun resumeAsync(id: Int, customNotificationTitle: String?) {
         scope.launch {
-            resume(id)
+            resume(id, customNotificationTitle)
         }
     }
 
-    fun resumeAsync(tag: String) {
+    fun resumeAsync(tag: String, customNotificationTitle: String?) {
         scope.launch {
             downloadDao.getAllEntity().forEach {
                 if (it.tag == tag) {
-                    resume(it.id)
+                    resume(it.id, customNotificationTitle)
                 }
             }
         }
@@ -325,7 +341,7 @@ internal class DownloadManager(
     fun resumeAllAsync() {
         scope.launch {
             downloadDao.getAllEntity().forEach {
-                resume(it.id)
+                resume(it.id, null)
             }
         }
     }

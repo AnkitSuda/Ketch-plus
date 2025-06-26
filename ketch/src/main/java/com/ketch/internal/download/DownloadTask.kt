@@ -2,6 +2,7 @@ package com.ketch.internal.download
 
 import com.ketch.internal.network.DownloadService
 import com.ketch.internal.utils.DownloadConst
+import com.ketch.internal.utils.DownloadException
 import com.ketch.internal.utils.FileUtil
 import java.io.File
 import java.io.FileOutputStream
@@ -55,8 +56,11 @@ internal class DownloadTask(
         if (response.code() !in VALUE_200..VALUE_299 ||
             responseBody == null
         ) {
-            throw IOException(
-                "Something went wrong, response code: ${response.code()}, responseBody null: ${responseBody == null}"
+            throw DownloadException(
+                exception = IOException(
+                    "Something went wrong, response code: ${response.code()}, responseBody null: ${responseBody == null}"
+                ),
+                statusCode = response.code(),
             )
         }
 

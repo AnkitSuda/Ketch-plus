@@ -11,7 +11,8 @@ internal object DatabaseInstance {
             db.execSQL(
                 """
             ALTER TABLE downloads 
-            ADD COLUMN customNotificationTitle TEXT
+            ADD COLUMN stopReason INT,
+            ADD COLUMN customNotificationTitle TEXT;
         """.trimIndent()
             )
         }

@@ -78,4 +78,16 @@ internal object FileUtil {
             tempFile.createNewFile()
         }
     }
+
+    fun calculateMd5(file: File): String {
+        val digest = MessageDigest.getInstance("MD5")
+        file.inputStream().use { inputStream ->
+            val buffer = ByteArray(8192)
+            var bytesRead: Int
+            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                digest.update(buffer, 0, bytesRead)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it and 0xFF.toByte()) }
+    }
 }

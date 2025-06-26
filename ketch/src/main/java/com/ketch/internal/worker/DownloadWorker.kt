@@ -1,6 +1,7 @@
 package com.ketch.internal.worker
 
 import android.content.Context
+import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
@@ -11,6 +12,7 @@ import com.ketch.internal.download.ApiResponseHeaderChecker
 import com.ketch.internal.network.RetrofitInstance
 import com.ketch.internal.notification.DownloadNotificationManager
 import com.ketch.internal.utils.DownloadConst
+import com.ketch.internal.utils.DownloadException
 import com.ketch.internal.utils.ExceptionConst
 import com.ketch.internal.utils.FileUtil
 import com.ketch.internal.utils.UserAction
@@ -53,7 +55,8 @@ internal class DownloadWorker(
         val dirPath = downloadRequest.path
         val fileName = downloadRequest.fileName
         val headers = downloadRequest.headers
-        val supportPauseResume = downloadRequest.supportPauseResume // in case of false, we will not store total length info in DB
+        val supportPauseResume =
+            downloadRequest.supportPauseResume // in case of false, we will not store total length info in DB
 
         if (notificationConfig.enabled) {
             downloadNotificationManager = DownloadNotificationManager(
@@ -75,7 +78,7 @@ internal class DownloadWorker(
 
             val latestETag =
                 ApiResponseHeaderChecker(downloadRequest.url, downloadService, headers)
-                    .getHeaderValue(DownloadConst.ETAG_HEADER) ?: ""
+                    .getHeaderValue(DownloadConst.ETAG_HEADER)?.replace("\"", "") ?: ""
 
             val existingETag = downloadDao.find(id)?.eTag ?: ""
 
@@ -152,6 +155,26 @@ internal class DownloadWorker(
                 }
             )
 
+            if (latestETag.isNotBlank() && latestETag != "\"\"") {
+                val fileMd5 = FileUtil.calculateMd5(File(dirPath, fileName))
+
+                if (fileMd5 != latestETag) {
+                    FileUtil.deleteFileIfExists(path = dirPath, name = fileName)
+
+                    downloadDao.find(id)?.copy(
+                        status = Status.FAILED.toString(),
+                        lastModified = System.currentTimeMillis(),
+                        failureReason = "File corrupted"
+                    )?.let { downloadDao.update(it) }
+                    FileUtil.deleteFileIfExists(dirPath, fileName)
+                    downloadNotificationManager?.sendDownloadFailedNotification(
+                        currentProgress = 0
+                    )
+
+                    return Result.failure()
+                }
+            }
+
             downloadDao.find(id)?.copy(
                 totalBytes = totalLength,
                 status = Status.SUCCESS.toString(),
@@ -213,6 +236,18 @@ internal class DownloadWorker(
                     }
                 }
             }
+
+
+            if (e is DownloadException) {
+                val retryableStatusCodes = arrayOf(408, 429, 500, 502, 503, 504)
+
+                if (e.statusCode != null && e.statusCode !in retryableStatusCodes) {
+                    return Result.failure(
+                        workDataOf(ExceptionConst.KEY_EXCEPTION to e.message)
+                    )
+                }
+            }
+
 //            Result.failure(
 //                workDataOf(ExceptionConst.KEY_EXCEPTION to e.message)
 //            )
