@@ -3,6 +3,7 @@ package com.ketch.internal.utils
 import com.ketch.DownloadModel
 import com.ketch.Status
 import com.ketch.internal.database.DownloadEntity
+import kotlin.String
 
 // Mapper function to convert DownloadEntity to DownloadModel
 internal fun DownloadEntity.toDownloadModel() =
@@ -21,5 +22,7 @@ internal fun DownloadEntity.toDownloadModel() =
         lastModified = lastModified,
         eTag = eTag,
         metaData = metaData,
-        failureReason = failureReason
+        failureReason = failureReason,
+        customNotificationTitle = customNotificationTitle,
+        stopReason = stopReason,
     )

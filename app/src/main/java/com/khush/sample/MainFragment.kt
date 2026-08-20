@@ -106,7 +106,8 @@ class MainFragment : Fragment() {
                     fileName = downloadItem.fileName,
                     path = downloadItem.path,
                     tag = downloadItem.tag,
-                    metaData = downloadItem.metaData
+                    metaData = downloadItem.metaData,
+                    customNotificationTitle = downloadItem.customNotificationTitle,
                 )
             }
 
@@ -115,7 +116,7 @@ class MainFragment : Fragment() {
             }
 
             override fun onResumeClick(downloadItem: DownloadModel) {
-                ketch.resume(downloadItem.id)
+                ketch.resume(downloadItem.id, downloadItem.customNotificationTitle)
             }
 
             override fun onRetryClick(downloadItem: DownloadModel) {

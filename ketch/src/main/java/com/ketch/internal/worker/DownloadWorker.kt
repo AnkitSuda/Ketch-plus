@@ -155,25 +155,26 @@ internal class DownloadWorker(
                 }
             )
 
-            if (latestETag.isNotBlank() && latestETag != "\"\"") {
-                val fileMd5 = FileUtil.calculateMd5(File(dirPath, fileName))
-
-                if (fileMd5 != latestETag) {
-                    FileUtil.deleteFileIfExists(path = dirPath, name = fileName)
-
-                    downloadDao.find(id)?.copy(
-                        status = Status.FAILED.toString(),
-                        lastModified = System.currentTimeMillis(),
-                        failureReason = "File corrupted"
-                    )?.let { downloadDao.update(it) }
-                    FileUtil.deleteFileIfExists(dirPath, fileName)
-                    downloadNotificationManager?.sendDownloadFailedNotification(
-                        currentProgress = 0
-                    )
-
-                    return Result.failure()
-                }
-            }
+            // We wont check because s3 can return mismatched etag for multipart download
+//            if (latestETag.isNotBlank() && latestETag != "\"\"") {
+//                val fileMd5 = FileUtil.calculateMd5(File(dirPath, fileName))
+//
+//                if (fileMd5 != latestETag) {
+//                    FileUtil.deleteFileIfExists(path = dirPath, name = fileName)
+//
+//                    downloadDao.find(id)?.copy(
+//                        status = Status.FAILED.toString(),
+//                        lastModified = System.currentTimeMillis(),
+//                        failureReason = "File corrupted"
+//                    )?.let { downloadDao.update(it) }
+//                    FileUtil.deleteFileIfExists(dirPath, fileName)
+//                    downloadNotificationManager?.sendDownloadFailedNotification(
+//                        currentProgress = 0
+//                    )
+//
+//                    return Result.failure()
+//                }
+//            }
 
             downloadDao.find(id)?.copy(
                 totalBytes = totalLength,
